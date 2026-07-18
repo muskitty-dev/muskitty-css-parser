@@ -16,6 +16,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Checkout muskitty-css-tokenizer (path dependency)
+        uses: actions/checkout@v4
+        with:
+          repository: muskitty-dev/muskitty-css-tokenizer
+          path: ../muskitty-css-tokenizer
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo check
@@ -25,6 +30,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Checkout muskitty-css-tokenizer (path dependency)
+        uses: actions/checkout@v4
+        with:
+          repository: muskitty-dev/muskitty-css-tokenizer
+          path: ../muskitty-css-tokenizer
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo test --lib
@@ -34,6 +44,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Checkout muskitty-css-tokenizer (path dependency)
+        uses: actions/checkout@v4
+        with:
+          repository: muskitty-dev/muskitty-css-tokenizer
+          path: ../muskitty-css-tokenizer
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
@@ -44,6 +59,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Checkout muskitty-css-tokenizer (path dependency)
+        uses: actions/checkout@v4
+        with:
+          repository: muskitty-dev/muskitty-css-tokenizer
+          path: ../muskitty-css-tokenizer
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
@@ -55,6 +75,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Checkout muskitty-css-tokenizer (path dependency)
+        uses: actions/checkout@v4
+        with:
+          repository: muskitty-dev/muskitty-css-tokenizer
+          path: ../muskitty-css-tokenizer
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: "1.82"
