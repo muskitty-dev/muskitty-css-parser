@@ -1,0 +1,22 @@
+[package]
+name = "muskitty-css-parser"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.82"
+license = "Apache-2.0"
+description = "CSS Syntax Module Level 3 parser (§5) extracted from muskitty-css"
+repository = "https://github.com/muskitty-dev/muskitty-css-parser"
+homepage = "https://github.com/muskitty-dev"
+documentation = "https://docs.rs/muskitty-css-parser"
+keywords = ["css", "parser", "syntax", "web", "selectors"]
+categories = ["parser-implementations", "web-programming"]
+authors = ["MusCat / MusKitty Bit-Torch Community"]
+
+[dependencies]
+muskitty-css-tokenizer = { path = "../muskitty-css-tokenizer", version = "0.1.0" }
+
+[dev-dependencies]
+
+# 防止被父 workspace (D:\Muskitty\Cargo.toml) 误吸入。
+# parser 作为独立 git 仓库剥离，有自己的 workspace 根。
+[workspace]
