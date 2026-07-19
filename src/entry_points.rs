@@ -2,9 +2,9 @@
 //!
 //! Nine entry points producing high-level CSS objects from input. The
 //! grammar-based hooks §5.4.1 (`parse something according to a CSS
-//! grammar`, L1895-1944) and §5.4.2 (`parse a comma-separated list
-//! according to a CSS grammar`, L1949-2001) are deferred — they
-//! require grammar knowledge from Selectors / Values specs.
+//! grammar`) and §5.4.2 (`parse a comma-separated list according to a
+//! CSS grammar`) are implemented in [`crate::grammar`] (using the
+//! [`Grammar`](crate::grammar::Grammar) trait).
 //!
 //! # References
 //!
@@ -26,7 +26,7 @@ use muskitty_css_tokenizer::{CssTokenizer, Token, Tokenizer};
 /// tokenize the result, return the stream of tokens. Our tokenizer
 /// applies §5.3 preprocessing (filter code points) internally, so we
 /// just drain all tokens up to and including the `<EOF-token>`.
-fn normalize_from_string(input: &str) -> TokenStream {
+pub(crate) fn normalize_from_string(input: &str) -> TokenStream {
     let mut tz = CssTokenizer::new(input);
     let mut tokens = Vec::new();
     while let Some(token) = tz.next_token() {

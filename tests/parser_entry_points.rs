@@ -1,7 +1,8 @@
 //! §5.4 Parser Entry Points tests (CP-6).
 //!
 //! Verifies the 9 implemented entry points (§5.4.3-§5.4.10). The
-//! grammar-based hooks §5.4.1 / §5.4.2 are deferred.
+//! grammar-based hooks §5.4.1 / §5.4.2 are tested in
+//! `parser_grammar.rs`.
 
 use muskitty_css_parser::{
     parse_a_blocks_contents, parse_a_comma_separated_list_of_component_values,

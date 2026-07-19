@@ -26,6 +26,7 @@
 //! - [`parse_component_value`] — single component value (§5.4.8)
 //! - [`parse_list_of_component_values`] — list of component values (§5.4.9)
 //! - [`parse_comma_separated_list_of_component_values`] — comma-separated list (§5.4.10)
+//! - [`parse_a_grammar`] / [`parse_a_comma_separated_list_with_grammar`] — generic grammar hooks (§5.4.1 / §5.4.2)
 //! - [`tokenize`] — token stream only (§4.3)
 //!
 //! # References
@@ -35,6 +36,7 @@
 
 pub mod algorithms;
 pub mod entry_points;
+pub mod grammar;
 pub mod token_stream;
 pub mod types;
 
@@ -55,6 +57,7 @@ pub use entry_points::{
     parse_a_component_value, parse_a_declaration, parse_a_list_of_component_values, parse_a_rule,
     parse_a_stylesheet, parse_a_stylesheets_contents,
 };
+pub use grammar::{parse_a_comma_separated_list_with_grammar, parse_a_grammar, Grammar};
 pub use token_stream::TokenStream;
 pub use types::{
     AtRule, BlockKind, ComponentValue, Declaration, Function, ParseError, QualifiedRule, Rule,
