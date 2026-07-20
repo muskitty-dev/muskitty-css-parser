@@ -7,40 +7,38 @@
 [![License](https://img.shields.io/crates/l/muskitty-css-parser.svg)](https://github.com/muskitty-dev/muskitty-css-parser/blob/main/LICENSE)
 [![CI](https://github.com/muskitty-dev/muskitty-css-parser/actions/workflows/ci.yml/badge.svg)](https://github.com/muskitty-dev/muskitty-css-parser/actions/workflows/ci.yml)
 
-A from-scratch CSS parser written in pure Rust, implementing the
-parser layer of the [CSS Syntax Module Level 3 §5](https://drafts.csswg.org/css-syntax-3/#tokenization)
-on top of [`muskitty-css-tokenizer`](https://crates.io/crates/muskitty-css-tokenizer).
+一个用纯 Rust 从零编写的 CSS 解析器，在 [`muskitty-css-tokenizer`](https://crates.io/crates/muskitty-css-tokenizer) 之上实现了 [CSS Syntax Module Level 3 §5](https://drafts.csswg.org/css-syntax-3/#tokenization) 的解析器层。
 
-Part of the [MusKitty](https://github.com/muskitty-dev) browser engine project.
+它是 [MusKitty](https://github.com/muskitty-dev) 浏览器引擎项目的组成部分。
 
-## Status
+## 状态
 
-| Component | Spec Coverage | Test Pass Rate |
+| 组件 | 规范覆盖 | 测试通过率 |
 |-----------|---------------|----------------|
-| **Parser** (§5) | 8 entry points + 13 consume algorithms | 62/62 tests |
+| **Parser** (§5) | 8 个入口点 + 13 个消费算法 | 62/62 测试 |
 
-- Zero `unsafe` code
-- Zero C/C++ dependencies
-- One runtime dependency: `muskitty-css-tokenizer`
-- Rust stable toolchain only
+- 零 `unsafe` 代码
+- 零 C/C++ 依赖
+- 单个运行时依赖：`muskitty-css-tokenizer`
+- 仅使用 Rust stable 工具链
 - MSRV 1.82
 
-## Installation
+## 安装
 
-Add this to your `Cargo.toml`:
+将以下内容添加到你的 `Cargo.toml`：
 
 ```toml
 [dependencies]
 muskitty-css-parser = "0.1.0"
 ```
 
-Or run:
+或运行：
 
 ```bash
 cargo add muskitty-css-parser
 ```
 
-## Quick Start
+## 快速上手
 
 ```rust
 use muskitty_css_parser::{parse_stylesheet, parse_rule, Rule};
@@ -54,7 +52,7 @@ let rule = parse_rule("@media print { body { color: black; } }").unwrap();
 assert!(matches!(rule, Rule::AtRule(_)));
 ```
 
-## Architecture
+## 架构
 
 ```
 muskitty-css-parser/
@@ -68,22 +66,21 @@ muskitty-css-parser/
     lib.rs            Public API: 7 top-level functions + re-exports
 ```
 
-### What is a CSS Parser?
+### 什么是 CSS 解析器？
 
-The CSS parser is the second stage of the two-stage model in CSS Syntax §3.1:
+CSS 解析器是 CSS Syntax §3.1 两阶段模型中的第二阶段：
 
-1. **Tokenization** (delegated to `muskitty-css-tokenizer`) — produces a
-   token stream after §5.3 preprocessing.
-2. **Parsing** (this crate) — consumes tokens and produces CSS objects
-   such as stylesheets, rules, declarations, and component values.
+1. **分词**（委托给 `muskitty-css-tokenizer`）— 在 §5.3 预处理之后生成 token 流。
+2. **解析**（本 crate）— 消费 token 并生成 CSS 对象，
+   如样式表、规则、声明和组件值。
 
-The parser exposes 8 entry points (§5.4) and 13 consume algorithms (§5.5).
+该解析器暴露了 8 个入口点（§5.4）和 13 个消费算法（§5.5）。
 
-### Spec Coverage
+### 规范覆盖
 
-All §5 parser entry points and consume algorithms are implemented:
+所有 §5 解析器入口点和消费算法均已实现：
 
-**Entry points (§5.4):**
+**入口点（§5.4）：**
 
 - §5.4.1 Parse a stylesheet
 - §5.4.2 Parse a list of rules
@@ -94,7 +91,7 @@ All §5 parser entry points and consume algorithms are implemented:
 - §5.4.7 Parse a list of component values
 - §5.4.8 Parse a comma-separated list of component values
 
-**Consume algorithms (§5.5):**
+**消费算法（§5.5）：**
 
 - §5.5.1 Consume a stylesheet's contents
 - §5.5.2 Consume a list of rules
@@ -109,14 +106,14 @@ All §5 parser entry points and consume algorithms are implemented:
 - §5.5.11 Consume a function
 - §5.5.12 Consume a unicode-range value (referenced from §5.4.6)
 
-## Building
+## 构建
 
 ```bash
 cargo check
 cargo build
 ```
 
-## Testing
+## 测试
 
 ```bash
 # Integration tests (55 tests across 6 files)
@@ -129,25 +126,25 @@ cargo test --doc
 cargo test
 ```
 
-## Design Principles
+## 设计原则
 
-1. **CSSWG is ground truth** — Implementation follows the spec exactly.
-2. **Spec-compliant, not test-compliant** — Tests verify the code; code is never modified to pass a test unless the spec proves the test is wrong.
-3. **Zero runtime dependencies** (besides `muskitty-css-tokenizer`) — Pure safe Rust.
-4. **Zero unsafe** — Pure safe Rust.
-5. **Surgical changes** — Every diff is as small as the task requires.
+1. **CSSWG 是唯一权威** — 实现严格遵循规范。
+2. **对齐规范，而非对齐测试** — 测试用于验证代码；除非规范证明测试有误，否则绝不为了通过测试而修改代码。
+3. **零运行时依赖**（除 `muskitty-css-tokenizer` 外）— 纯安全的 Rust。
+4. **零 unsafe** — 纯安全的 Rust。
+5. **外科手术式修改** — 每次改动都尽可能小，仅满足任务所需。
 
-## Spec Reference
+## 规范参考
 
-This implementation references:
+本实现参考了：
 
-- [CSS Syntax Module Level 3](https://drafts.csswg.org/css-syntax-3/) — Primary authority
+- [CSS Syntax Module Level 3](https://drafts.csswg.org/css-syntax-3/) — 主要权威
   - §3.1: CSS Parsing Overview (two-stage model)
   - §5: Parser Algorithms (entry points + consume algorithms)
   - §5.3: Input Stream Preprocessing (in tokenizer)
 
-## License
+## 许可证
 
-Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
+基于 Apache License, Version 2.0 授权。详见 [LICENSE](LICENSE)。
 
 Copyright 2026 MusCat / MusKitty Bit-Torch Community
