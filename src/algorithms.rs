@@ -554,10 +554,7 @@ pub fn consume_a_blocks_contents(input: &mut TokenStream) -> BlockContents {
                 if !decls.is_empty() {
                     rules.push(Rule::Declarations(std::mem::take(&mut decls)));
                 }
-                return BlockContents {
-                    decls: Vec::new(),
-                    rules,
-                };
+                return BlockContents { rules };
             }
             Token::AtKeyword(_) => {
                 // §5.5.5 L2519-2528: at-keyword flushes decls.
@@ -604,25 +601,18 @@ pub fn consume_a_blocks_contents(input: &mut TokenStream) -> BlockContents {
 /// Result of `consume_a_block` / `consume_a_blocks_contents`. Combines
 /// a list of declarations (possibly empty) and a list of child rules.
 ///
-/// Note: when `consume_a_blocks_contents` returns, the declarations are
-/// always empty — any pending decls have been flushed into `rules` as
-/// `Rule::Declarations` variants (§5.5.5 L2514-2562). The `decls`
-/// field is kept for forward-compatibility with future CSSOM
-/// integration that may want a separate declaration list.
+/// Result of `consume_a_block` / `consume_a_blocks_contents`.
+///
+/// All declarations are already flushed into `rules` as
+/// `Rule::Declarations` variants per §5.5.5 L2514-2562.
 #[derive(Debug, Clone, Default)]
 pub struct BlockContents {
-    pub decls: Vec<Declaration>,
     pub rules: Vec<Rule>,
 }
 
-/// Split block contents from CP-5's `consume_a_block` into the
-/// AtRule / QualifiedRule's expected shape:
-///   - declarations → `Some(decls)` for AtRule, `decls` field for
-///     QualifiedRule
-///   - rules → `Some(rules)` for AtRule, `child_rules` field for
-///     QualifiedRule
+/// Split block contents into the AtRule / QualifiedRule's expected shape.
 fn split_block_contents(block: BlockContents) -> (Vec<Declaration>, Vec<Rule>) {
-    (block.decls, block.rules)
+    (Vec::new(), block.rules)
 }
 
 /// §5.5.3 L2372-2383: Detect whether a qualified rule's prelude

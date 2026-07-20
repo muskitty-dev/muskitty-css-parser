@@ -34,9 +34,7 @@ fn parse_a_stylesheets_contents_returns_vec() {
 fn parse_a_blocks_contents_basic() {
     let bc = parse_a_blocks_contents("color: red; font: 16px;");
     // §5.5.5: declarations always flushed as Rule::Declarations on
-    // return. So `decls` should be empty, and `rules` should contain
-    // exactly one Declarations variant.
-    assert!(bc.decls.is_empty());
+    // return. `rules` should contain one Declarations variant.
     assert_eq!(bc.rules.len(), 1);
     match &bc.rules[0] {
         Rule::Declarations(decls) => {
