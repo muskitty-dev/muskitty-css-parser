@@ -493,7 +493,9 @@ pub fn consume_a_qualified_rule(
                         return Ok(None);
                     } else {
                         let _ = consume_a_block(input);
-                        return Err(ParseError); // invalid rule error
+                        return Err(ParseError::new(
+                            "qualified rule with custom property in prelude is invalid when not nested",
+                        ));
                     }
                 }
                 let block = consume_a_block(input);
@@ -586,7 +588,7 @@ pub fn consume_a_blocks_contents(input: &mut TokenStream) -> BlockContents {
                             // §5.5.5 L2546-2547: "If nothing was
                             // returned, do nothing."
                         }
-                        Err(ParseError) => {
+                        Err(_) => {
                             // §5.5.5 L2549-2554: invalid rule error.
                             if !decls.is_empty() {
                                 rules.push(Rule::Declarations(std::mem::take(&mut decls)));

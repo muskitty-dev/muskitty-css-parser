@@ -2,7 +2,7 @@
 
 use muskitty_css_parser::{
     consume_a_blocks_contents, consume_a_qualified_rule, consume_a_stylesheets_contents,
-    consume_an_at_rule, BlockContents, Numeric, ParseError, Rule, Token, TokenStream,
+    consume_an_at_rule, BlockContents, Numeric, Rule, Token, TokenStream,
 };
 
 /// §5.5.1: Empty input produces an empty rule list.
@@ -167,7 +167,7 @@ fn qualified_rule_custom_property_in_prelude_top_level() {
         Token::Eof,
     ]);
     let result = consume_a_qualified_rule(&mut stream, None, false);
-    assert!(matches!(result, Err(ParseError)));
+    assert!(result.is_err());
 }
 
 /// §5.5.5: A block containing `color: red; a {}` produces a

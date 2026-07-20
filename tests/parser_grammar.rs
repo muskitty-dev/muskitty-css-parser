@@ -44,7 +44,7 @@ impl Grammar for FirstTokenGrammar {
         match input.first() {
             Some(ComponentValue::PreservedToken(t)) => Ok(t.clone()),
             Some(_) => Ok(Token::Eof), // non-token CV (function/block) — stub
-            None => Err(ParseError),
+            None => Err(ParseError::new("empty input")),
         }
     }
 }
@@ -55,7 +55,7 @@ struct RejectingGrammar;
 impl Grammar for RejectingGrammar {
     type Output = ();
     fn parse(&self, _input: &[ComponentValue]) -> Result<(), ParseError> {
-        Err(ParseError)
+        Err(ParseError::new("rejected by grammar"))
     }
 }
 

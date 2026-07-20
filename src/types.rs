@@ -139,5 +139,27 @@ pub enum BlockKind {
 /// the WHATWG algorithms themselves do not specify any. Higher-level
 /// callers (CSSOM) decide whether to drop the result, log it, or
 /// surface a structured error.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct ParseError;
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParseError {
+    /// Human-readable diagnostic message describing the parse failure.
+    /// Line/column tracking is deferred until the tokenizer exposes
+    /// per-token position metadata.
+    pub message: String,
+}
+
+impl ParseError {
+    /// Create a parse error with a diagnostic message.
+    pub fn new(message: impl Into<String>) -> Self {
+        ParseError {
+            message: message.into(),
+        }
+    }
+}
+
+impl std::fmt::Display for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "CSS parse error: {}", self.message)
+    }
+}
+
+impl std::error::Error for ParseError {}
