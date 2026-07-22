@@ -18,25 +18,16 @@ use crate::algorithms::{
 };
 use crate::token_stream::TokenStream;
 use crate::types::{ComponentValue, Declaration, Rule, Stylesheet};
-use muskitty_css_tokenizer::{CssTokenizer, Token, Tokenizer};
+use muskitty_css_tokenizer::Token;
 
 /// §5.4 (L1827-1842) Normalize into a token stream.
 ///
 /// Per §5.4 L1837-1840 (the "string" case): filter code points,
-/// tokenize the result, return the stream of tokens. Our tokenizer
-/// applies §5.3 preprocessing (filter code points) internally, so we
-/// just drain all tokens up to and including the `<EOF-token>`.
+/// tokenize the result, return the stream of tokens. 使用
+/// [`TokenStream::with_source`] 以保留原始 source text，供 §5.5.6
+/// `original_text`（custom property）使用。
 pub(crate) fn normalize_from_string(input: &str) -> TokenStream {
-    let mut tz = CssTokenizer::new(input);
-    let mut tokens = Vec::new();
-    while let Some(token) = tz.next_token() {
-        let is_eof = matches!(token, Token::Eof);
-        tokens.push(token);
-        if is_eof {
-            break;
-        }
-    }
-    TokenStream::new(tokens)
+    TokenStream::with_source(input)
 }
 
 /// §5.4.3 (L2005-2033) Parse a stylesheet.

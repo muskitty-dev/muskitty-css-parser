@@ -5,7 +5,7 @@
 //! (current position), and `marked_indexes` (a stack of saved positions
 //! for backtracking).
 
-use muskitty_css_tokenizer::Token;
+use muskitty_css_tokenizer::{CssTokenizer, Token, Tokenizer};
 
 /// §5.3 L1725-1754: A token stream.
 #[derive(Debug, Clone)]
@@ -22,6 +22,11 @@ pub struct TokenStream {
     /// §5.3 L1750-1753: A stack of index values for backtracking.
     /// Starts empty.
     marked_indexes: Vec<usize>,
+    /// 与 `tokens` 平行的 byte ranges。空 Vec 表示无 source tracking
+    /// （`new()` 构造的 stream 无 source）。由 [`Self::with_source`] 填充。
+    token_spans: Vec<std::ops::Range<usize>>,
+    /// 原始 source text。`None` 表示无 source tracking。
+    source: Option<String>,
 }
 
 impl TokenStream {
@@ -29,6 +34,9 @@ impl TokenStream {
     /// implicitly appends an EOF token (§5.3 L1811-1813); we model
     /// it by returning `Token::Eof` from [`Self::next_token`] when
     /// index is out of bounds, rather than storing a sentinel.
+    ///
+    /// 构造的 stream **不带** source-text tracking。如需追踪原始 source
+    /// （用于 §5.5.6 `original_text`），请用 [`Self::with_source`]。
     pub fn new(mut tokens: Vec<Token>) -> Self {
         // Ensure an EOF token is present at the end (§5.3 L1811-1813).
         // The tokenizer already emits one, but be defensive.
@@ -39,7 +47,66 @@ impl TokenStream {
             tokens,
             index: 0,
             marked_indexes: Vec::new(),
+            token_spans: Vec::new(),
+            source: None,
         }
+    }
+
+    /// 构造一个带 source-text tracking 的 TokenStream。
+    ///
+    /// tokenize `source` 并记录每个 token 的 byte range，使
+    /// [`Self::source_slice`] 能返回原始 source 片段。供 §5.5.6
+    /// `original_text`（custom property）使用。
+    pub fn with_source(source: &str) -> Self {
+        let mut tz = CssTokenizer::new(source);
+        // 建立 char-index → byte-offset 映射（tokenizer 内部用 char 索引）
+        let char_to_byte: Vec<usize> = source.char_indices().map(|(i, _)| i).collect();
+        let source_len = source.len();
+
+        let mut tokens = Vec::new();
+        let mut spans = Vec::new();
+        while let Some((token, char_range)) = tz.next_token_with_span() {
+            let start_byte = char_to_byte
+                .get(char_range.start)
+                .copied()
+                .unwrap_or(source_len);
+            let end_byte = char_to_byte
+                .get(char_range.end)
+                .copied()
+                .unwrap_or(source_len);
+            let is_eof = matches!(token, Token::Eof);
+            tokens.push(token);
+            spans.push(start_byte..end_byte);
+            if is_eof {
+                break;
+            }
+        }
+        // 防御：确保 EOF 存在（与 new() 一致）
+        if tokens.last().is_none_or(|t| !matches!(t, Token::Eof)) {
+            tokens.push(Token::Eof);
+            spans.push(source_len..source_len);
+        }
+        Self {
+            tokens,
+            index: 0,
+            marked_indexes: Vec::new(),
+            token_spans: spans,
+            source: Some(source.to_string()),
+        }
+    }
+
+    /// 返回 `tokens[start_index..end_index]` 对应的原始 source text。
+    ///
+    /// 参数是 **token 索引**（不是 char/byte 索引）。
+    /// 返回 `None` 如果无 source tracking 或 index 越界。
+    pub fn source_slice(&self, start_index: usize, end_index: usize) -> Option<&str> {
+        let source = self.source.as_ref()?;
+        if end_index == 0 || start_index >= end_index {
+            return Some("");
+        }
+        let start = self.token_spans.get(start_index)?.start;
+        let end = self.token_spans.get(end_index - 1)?.end;
+        source.get(start..end)
     }
 
     /// §5.3 L1769-1773: The item of `tokens` at `index`. If

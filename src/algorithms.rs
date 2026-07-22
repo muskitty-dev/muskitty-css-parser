@@ -182,11 +182,10 @@ pub fn consume_a_unicode_range_value(input_string: &str) -> Vec<ComponentValue> 
 /// 6. If last two non-whitespace values are `!` + `important` (ASCII
 ///    case-insensitive), remove them and set `important` flag.
 /// 7. Strip trailing whitespace tokens.
-/// 8. Custom property (`--foo`): set `original_text` (deferred —
-///    requires source-text tracking in `TokenStream`). Otherwise,
-///    if value contains a top-level {}-block AND any other non-ws
-///    value, return `None` (only the whole value may be a {}-block
-///    for non-custom properties).
+/// 8. Custom property (`--foo`): set `original_text` to the source text
+///    spanning the value tokens. Otherwise, if value contains a top-level
+///    {}-block AND any other non-ws value, return `None` (only the whole
+///    value may be a {}-block for non-custom properties).
 /// 9. (§5.5.6 L2707-2712: `unicode-range` descriptor handling
 ///    deferred — requires source-text tracking.)
 pub fn consume_a_declaration(input: &mut TokenStream, nested: bool) -> Option<Declaration> {
@@ -217,8 +216,15 @@ pub fn consume_a_declaration(input: &mut TokenStream, nested: bool) -> Option<De
     // Step 4 (§5.5.6 L2673-2674): discard whitespace.
     input.discard_whitespace();
 
+    // 记录 value 消费前的 token index，供 §5.5.6 original_text 使用。
+    let value_start_index = input.index;
+
     // Step 5 (§5.5.6 L2676-2680): consume value until `;`.
     let mut value = consume_a_list_of_component_values(input, Some(Token::Semicolon), nested);
+
+    // value_end_index 指向 `;` 或 EOF（consume_a_list_of_component_values
+    // 消费到 stop token 前停止，不消费 stop token 本身）。
+    let value_end_index = input.index;
 
     // Step 6 (§5.5.6 L2682-2687): strip !important from the tail.
     let important = strip_important(&mut value);
@@ -231,7 +237,7 @@ pub fn consume_a_declaration(input: &mut TokenStream, nested: bool) -> Option<De
         value.pop();
     }
 
-    let decl = Declaration {
+    let mut decl = Declaration {
         name,
         value,
         important,
@@ -241,9 +247,11 @@ pub fn consume_a_declaration(input: &mut TokenStream, nested: bool) -> Option<De
     // Step 8 (§5.5.6 L2693-2705): custom property original_text +
     // top-level {}-block validity check.
     if is_custom_property_name(&decl.name) {
-        // §5.5.6 L2693-2698: original_text should be set. Deferred —
-        // requires `TokenStream` to retain original source text. For
-        // now, leave `None`.
+        // §5.5.6 L2693-2698: set original_text to the source text
+        // spanning the value tokens (colon 后、semicolon/EOF 前)。
+        decl.original_text = input
+            .source_slice(value_start_index, value_end_index)
+            .map(|s| s.to_string());
     } else {
         // §5.5.6 L2700-2705: if value contains a top-level {}-block
         // AND any other non-whitespace value, return nothing.
