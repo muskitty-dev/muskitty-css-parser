@@ -140,25 +140,41 @@ pub enum BlockKind {
 /// callers (CSSOM) decide whether to drop the result, log it, or
 /// surface a structured error.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ParseError {
-    /// Human-readable diagnostic message describing the parse failure.
+pub enum ParseError {
+    /// 通用语法错误，携带人类可读的诊断信息。
+    ///
     /// Line/column tracking is deferred until the tokenizer exposes
     /// per-token position metadata.
-    pub message: String,
+    Generic(String),
+    /// 组件值嵌套深度超过 [`MAX_NESTING_DEPTH`]。
+    ///
+    /// 用于阻止恶意 CSS（如 10,000 层 `{{{{...}}}}` / `((((...))))`）
+    /// 触发递归栈溢出（DoS）。触发后解析器停止下降，按 §5.5 的
+    /// 解析错误恢复语义继续处理后续 token。
+    ///
+    /// [`MAX_NESTING_DEPTH`]: crate::token_stream::MAX_NESTING_DEPTH
+    NestingTooDeep { depth: u32, limit: u32 },
 }
 
 impl ParseError {
     /// Create a parse error with a diagnostic message.
     pub fn new(message: impl Into<String>) -> Self {
-        ParseError {
-            message: message.into(),
-        }
+        ParseError::Generic(message.into())
     }
 }
 
 impl std::fmt::Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "CSS parse error: {}", self.message)
+        match self {
+            ParseError::Generic(msg) => write!(f, "CSS parse error: {}", msg),
+            ParseError::NestingTooDeep { depth, limit } => {
+                write!(
+                    f,
+                    "CSS parse error: nesting too deep (depth {}, limit {})",
+                    depth, limit
+                )
+            }
+        }
     }
 }
 

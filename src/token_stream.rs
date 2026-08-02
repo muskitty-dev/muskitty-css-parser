@@ -5,7 +5,24 @@
 //! (current position), and `marked_indexes` (a stack of saved positions
 //! for backtracking).
 
+use crate::types::ParseError;
 use muskitty_css_tokenizer::{CssTokenizer, Token, Tokenizer};
+use std::cell::{Cell, RefCell};
+
+/// §5.5 解析器最大嵌套深度。
+///
+/// `consume_a_simple_block` / `consume_a_function` 通过
+/// `consume_a_component_value` 间接递归；恶意 CSS（如 10,000 层
+/// `{{{{...}}}}` 或 `((((...))))`）可触发栈溢出。此上限用于在
+/// 递归到达危险深度前停止下降，记录 [`ParseError::NestingTooDeep`]。
+///
+/// 参考实现（上界，留足余量）：
+/// - Chromium `kMaxCSSTokenizerNestingLevel = 100`
+/// - Firefox `kMaxNesting = 200`
+/// - Servo `MAX_PARSER_NESTING_DEPTH = 100`
+///
+/// [`ParseError::NestingTooDeep`]: crate::types::ParseError::NestingTooDeep
+pub const MAX_NESTING_DEPTH: u32 = 1024;
 
 /// §5.3 L1725-1754: A token stream.
 #[derive(Debug, Clone)]
@@ -27,6 +44,12 @@ pub struct TokenStream {
     token_spans: Vec<std::ops::Range<usize>>,
     /// 原始 source text。`None` 表示无 source tracking。
     source: Option<String>,
+    /// §5.5 递归保护：当前嵌套深度（`consume_a_simple_block` /
+    /// `consume_a_function` 的递归深度）。进入 +1，退出 -1。
+    depth: Cell<u32>,
+    /// 嵌套深度超限时记录的错误。解析继续（按 §5.5 错误恢复语义
+    /// 停止下降），调用方可通过 [`Self::nesting_error`] 读取。
+    nesting_error: RefCell<Option<ParseError>>,
 }
 
 impl TokenStream {
@@ -49,6 +72,8 @@ impl TokenStream {
             marked_indexes: Vec::new(),
             token_spans: Vec::new(),
             source: None,
+            depth: Cell::new(0),
+            nesting_error: RefCell::new(None),
         }
     }
 
@@ -92,7 +117,46 @@ impl TokenStream {
             marked_indexes: Vec::new(),
             token_spans: spans,
             source: Some(source.to_string()),
+            depth: Cell::new(0),
+            nesting_error: RefCell::new(None),
         }
+    }
+
+    /// 记录嵌套深度超限错误（仅首次覆盖，保留最早的超限点）。
+    pub fn record_nesting_error(&self, depth: u32) {
+        if self.nesting_error.borrow().is_none() {
+            self.nesting_error.replace(Some(ParseError::NestingTooDeep {
+                depth,
+                limit: MAX_NESTING_DEPTH,
+            }));
+        }
+    }
+
+    /// 返回解析过程中记录的第一个嵌套深度超限错误。
+    pub fn nesting_error(&self) -> Option<ParseError> {
+        self.nesting_error.borrow().clone()
+    }
+
+    /// 进入一层嵌套（`consume_a_simple_block` / `consume_a_function`
+    /// 入口调用）。
+    ///
+    /// 返回 `Some(depth)` 表示该层已超过 [`MAX_NESTING_DEPTH`]：
+    /// 错误已被记录，调用方应停止下降（不再递归）并返回空结果。
+    /// 返回 `None` 表示正常进入。
+    pub fn enter_nesting(&self) -> Option<u32> {
+        let depth = self.depth.get() + 1;
+        self.depth.set(depth);
+        if depth > MAX_NESTING_DEPTH {
+            self.record_nesting_error(depth);
+            Some(depth)
+        } else {
+            None
+        }
+    }
+
+    /// 退出一层嵌套（与 [`Self::enter_nesting`] 成对调用）。
+    pub fn leave_nesting(&self) {
+        self.depth.set(self.depth.get().saturating_sub(1));
     }
 
     /// 返回 `tokens[start_index..end_index]` 对应的原始 source text。

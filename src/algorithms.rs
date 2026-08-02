@@ -53,6 +53,16 @@ pub fn consume_a_simple_block(input: &mut TokenStream) -> SimpleBlock {
     // §5.5.9 L2818: discard the opening token.
     input.discard_token();
 
+    // §5.5 递归保护：超过 MAX_NESTING_DEPTH 时记录 NestingTooDeep 并
+    // 停止下降（返回空 block，不再递归），避免恶意 CSS 触发栈溢出。
+    if input.enter_nesting().is_some() {
+        input.leave_nesting();
+        return SimpleBlock {
+            kind,
+            value: Vec::new(),
+        };
+    }
+
     let mut block = SimpleBlock {
         kind,
         value: Vec::new(),
@@ -62,6 +72,7 @@ pub fn consume_a_simple_block(input: &mut TokenStream) -> SimpleBlock {
         let next = input.next_token();
         if matches!(next, Token::Eof) || next == ending {
             input.discard_token();
+            input.leave_nesting();
             return block;
         }
         // §5.5.9 L2827-2829: anything else → consume a component value
@@ -83,11 +94,19 @@ pub fn consume_a_function(input: &mut TokenStream) -> Function {
         name,
         value: Vec::new(),
     };
+
+    // §5.5 递归保护：与 consume_a_simple_block 相同，超限即停止下降。
+    if input.enter_nesting().is_some() {
+        input.leave_nesting();
+        return function;
+    }
+
     loop {
         // §5.5.10 L2847-2850: EOF or `)-token` → discard, return function.
         match input.next_token() {
             Token::Eof | Token::CloseParen => {
                 input.discard_token();
+                input.leave_nesting();
                 return function;
             }
             // §5.5.10 L2852-2854: anything else → consume a component
@@ -642,4 +661,53 @@ fn looks_like_custom_property_in_prelude(prelude: &[ComponentValue]) -> bool {
             Some(ComponentValue::PreservedToken(Token::Colon))
         ) if name.starts_with("--")
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 构造 `open.repeat(n) + close.repeat(n)` 的输入流并解析单个
+    /// component value，返回是否触发 NestingTooDeep。
+    fn consume_deep_nesting(open: char, close: char, n: usize) -> Option<ParseError> {
+        let mut input = String::with_capacity(2 * n);
+        input.push_str(&open.to_string().repeat(n));
+        input.push_str(&close.to_string().repeat(n));
+        let mut stream = TokenStream::with_source(&input);
+        consume_a_component_value(&mut stream);
+        stream.nesting_error()
+    }
+
+    #[test]
+    fn deep_curly_nesting_records_nesting_too_deep() {
+        // 10,000 层 { 嵌套 → 不栈溢出，记录 NestingTooDeep
+        let err = consume_deep_nesting('{', '}', 10_000);
+        assert!(
+            matches!(err, Some(ParseError::NestingTooDeep { .. })),
+            "expected NestingTooDeep, got {:?}",
+            err
+        );
+    }
+
+    #[test]
+    fn deep_paren_nesting_records_nesting_too_deep() {
+        // 10,000 层 ( 嵌套 → 不栈溢出，记录 NestingTooDeep
+        let err = consume_deep_nesting('(', ')', 10_000);
+        assert!(
+            matches!(err, Some(ParseError::NestingTooDeep { .. })),
+            "expected NestingTooDeep, got {:?}",
+            err
+        );
+    }
+
+    #[test]
+    fn normal_nesting_parses_without_error() {
+        // 正常深度（100 层）→ 无 NestingTooDeep
+        let err = consume_deep_nesting('{', '}', 100);
+        assert!(
+            err.is_none(),
+            "100-level nesting must not exceed the limit, got {:?}",
+            err
+        );
+    }
 }
