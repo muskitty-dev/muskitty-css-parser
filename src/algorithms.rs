@@ -638,8 +638,25 @@ pub struct BlockContents {
 }
 
 /// Split block contents into the AtRule / QualifiedRule's expected shape.
+///
+/// §5.5.5 L2514-2562: `consume_a_blocks_contents` flushes each
+/// declaration run into a `Rule::Declarations` entry interleaved with
+/// child rules. At the AtRule/QualifiedRule boundary we flatten those
+/// runs back into the declarations list (preserving declaration order
+/// across the whole block), leaving AtRules/QualifiedRules as child
+/// rules. Previously declarations were left stranded in `child_rules`,
+/// so `AtRule.declarations` / `QualifiedRule.declarations` were always
+/// empty (P1-5 root cause).
 fn split_block_contents(block: BlockContents) -> (Vec<Declaration>, Vec<Rule>) {
-    (Vec::new(), block.rules)
+    let mut decls = Vec::new();
+    let mut rules = Vec::new();
+    for rule in block.rules {
+        match rule {
+            Rule::Declarations(d) => decls.extend(d),
+            other => rules.push(other),
+        }
+    }
+    (decls, rules)
 }
 
 /// §5.5.3 L2372-2383: Detect whether a qualified rule's prelude

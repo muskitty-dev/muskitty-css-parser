@@ -2,7 +2,7 @@
 
 use muskitty_css_parser::{
     consume_a_blocks_contents, consume_a_qualified_rule, consume_a_stylesheets_contents,
-    consume_an_at_rule, BlockContents, Numeric, Rule, Token, TokenStream,
+    consume_an_at_rule, parse_stylesheet, BlockContents, Numeric, Rule, Token, TokenStream,
 };
 
 /// §5.5.1: Empty input produces an empty rule list.
@@ -255,6 +255,68 @@ fn block_contents_invalid_decl_then_rule_restores_mark() {
     // leaving nothing.
     assert_eq!(bc.rules.len(), 1);
     assert!(matches!(&bc.rules[0], Rule::QualifiedRule(_)));
+}
+
+/// P1-5 根因: `@font-face { font-family: X; src: url(x) }` 的裸声明必须
+/// 进入 `AtRule.declarations`（展平 `Rule::Declarations`），而不是残留
+/// 在 `child_rules` 里（否则 CSSOM 转换后 @font-face 声明丢失）。
+#[test]
+fn at_rule_block_declarations_flattened() {
+    let ss = parse_stylesheet("@font-face { font-family: X; src: url(x); }");
+    assert_eq!(ss.rules.len(), 1);
+    match &ss.rules[0] {
+        Rule::AtRule(a) => {
+            assert_eq!(a.name, "font-face");
+            let decls = a
+                .declarations
+                .as_ref()
+                .expect("block at-rule declarations should be Some");
+            assert_eq!(decls.len(), 2, "font-family + src 应进入 declarations");
+            assert_eq!(decls[0].name, "font-family");
+            assert_eq!(decls[1].name, "src");
+            assert!(
+                a.child_rules.as_ref().unwrap().is_empty(),
+                "声明不应残留在 child_rules"
+            );
+        }
+        other => panic!("expected AtRule, got {other:?}"),
+    }
+}
+
+/// P1-5 根因: `@media { s { color: red } }` 的 child rule 保持 1 个
+/// QualifiedRule，且无裸声明时 declarations 为空。
+#[test]
+fn media_block_keeps_child_rules() {
+    let ss = parse_stylesheet("@media { s { color: red; } }");
+    assert_eq!(ss.rules.len(), 1);
+    match &ss.rules[0] {
+        Rule::AtRule(a) => {
+            assert_eq!(a.name, "media");
+            assert!(a.declarations.as_ref().unwrap().is_empty());
+            let child_rules = a.child_rules.as_ref().expect("child_rules should be Some");
+            assert_eq!(child_rules.len(), 1);
+            assert!(matches!(&child_rules[0], Rule::QualifiedRule(_)));
+        }
+        other => panic!("expected AtRule, got {other:?}"),
+    }
+}
+
+/// P1-5 根因: 块内声明与子规则混排时，声明按序展平进 `declarations`
+/// （`color` 在 `font-size` 前），子规则保留在 `child_rules`。
+#[test]
+fn mixed_block_decls_flattened_in_order() {
+    let ss = parse_stylesheet("a { color: red; b { color: blue; } font-size: 16px; }");
+    assert_eq!(ss.rules.len(), 1);
+    match &ss.rules[0] {
+        Rule::QualifiedRule(q) => {
+            assert_eq!(q.declarations.len(), 2);
+            assert_eq!(q.declarations[0].name, "color");
+            assert_eq!(q.declarations[1].name, "font-size");
+            assert_eq!(q.child_rules.len(), 1);
+            assert!(matches!(&q.child_rules[0], Rule::QualifiedRule(_)));
+        }
+        other => panic!("expected QualifiedRule, got {other:?}"),
+    }
 }
 
 /// §5.5.5: A block containing only declarations produces a single
