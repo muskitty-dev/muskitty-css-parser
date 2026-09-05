@@ -16,13 +16,17 @@ use std::cell::{Cell, RefCell};
 /// `{{{{...}}}}` 或 `((((...))))`）可触发栈溢出。此上限用于在
 /// 递归到达危险深度前停止下降，记录 [`ParseError::NestingTooDeep`]。
 ///
-/// 参考实现（上界，留足余量）：
+/// 参考实现：
 /// - Chromium `kMaxCSSTokenizerNestingLevel = 100`
 /// - Firefox `kMaxNesting = 200`
 /// - Servo `MAX_PARSER_NESTING_DEPTH = 100`
 ///
+/// 审计 F-3：1024 远超所有主流实现（5-10 倍），且每层在语法解析 + 下游
+/// （calc 求值、选择器解析）各叠 ~2-3 帧调用栈，1000 层即逼近线程栈余量。
+/// 取 Firefox 的 200，与最宽的主流上限平齐。
+///
 /// [`ParseError::NestingTooDeep`]: crate::types::ParseError::NestingTooDeep
-pub const MAX_NESTING_DEPTH: u32 = 1024;
+pub const MAX_NESTING_DEPTH: u32 = 200;
 
 /// §5.3 L1725-1754: A token stream.
 #[derive(Debug, Clone)]

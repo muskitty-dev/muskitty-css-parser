@@ -727,4 +727,22 @@ mod tests {
             err
         );
     }
+
+    #[test]
+    fn nesting_depth_limit_is_200() {
+        // F-3: 上限从 1024 收紧到 200（Firefox 平齐）。201 层触发、
+        // 200 层（≤ 上限，enter 后 depth 最大 200）不触发。
+        let err = consume_deep_nesting('(', ')', 201);
+        assert!(
+            matches!(err, Some(ParseError::NestingTooDeep { .. })),
+            "201-level nesting must exceed the limit, got {:?}",
+            err
+        );
+        let ok = consume_deep_nesting('(', ')', 200);
+        assert!(
+            ok.is_none(),
+            "200-level nesting must remain within the limit, got {:?}",
+            ok
+        );
+    }
 }
