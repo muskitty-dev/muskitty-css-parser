@@ -1,0 +1,36 @@
+{
+ "source": "css/css-syntax/at-rule-in-declaration-list.html",
+ "cases": [
+  {
+   "kind": "declaration-survives-at-rule",
+   "input": "div {\n  @at {}\n  color: green;\n}",
+   "declaration": "color"
+  },
+  {
+   "kind": "declaration-survives-at-rule",
+   "input": "div {\n  @at at;\n  color: green;\n}",
+   "declaration": "color"
+  },
+  {
+   "kind": "declaration-survives-at-rule",
+   "input": "@page {\n  @at {}\n  margin-top: 20px;\n}",
+   "declaration": "margin-top"
+  },
+  {
+   "kind": "declaration-survives-at-rule",
+   "input": "@page {\n  @at at;\n  margin-top: 20px;\n}",
+   "declaration": "margin-top"
+  },
+  {
+   "kind": "declaration-survives-at-rule",
+   "input": "@font-face {\n  @at {}\n  font-family: myfont;\n}",
+   "declaration": "font-family"
+  },
+  {
+   "kind": "declaration-survives-at-rule",
+   "input": "@font-face {\n  @at at;\n  font-family: myfont;\n}",
+   "declaration": "font-family"
+  }
+ ],
+ "note": "upstream asserts the property value via CSSOM; ported as 'the declaration after the at-rule survives parsing'"
+}

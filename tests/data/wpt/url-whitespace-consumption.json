@@ -1,0 +1,18 @@
+{
+ "source": "css/css-syntax/url-whitespace-consumption.html",
+ "cases": [
+  {
+   "kind": "declaration-valid",
+   "input": "background-image:url(\"foo\")"
+  },
+  {
+   "kind": "declaration-valid",
+   "input": "background-image:url( \"foo\")"
+  },
+  {
+   "kind": "declaration-valid",
+   "input": "background-image:url(\"foo\" )"
+  }
+ ],
+ "note": "upstream asserts CSSOM serialization equality; ported as parse validity"
+}

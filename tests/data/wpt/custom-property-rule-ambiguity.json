@@ -1,0 +1,18 @@
+{
+ "source": "css/css-syntax/custom-property-rule-ambiguity.html",
+ "cases": [
+  {
+   "kind": "stylesheet-rule-count",
+   "input": ".a { }\n--x:hover { } /* Ambiguous \"rule\" */\n.b { }",
+   "count": 2,
+   "desc": "rule that looks like a custom property declaration is ignored"
+  },
+  {
+   "kind": "stylesheet-rule-count",
+   "input": ".a { }\n--x:hover { ] } /* Ambiguous \"rule\" */\n.b { }",
+   "count": 2,
+   "desc": "rule that looks like an invalid custom property declaration is ignored"
+  }
+ ],
+ "note": "nested (stylesheet3/4) cases need CSSNestedDeclarations materialization and are not ported"
+}

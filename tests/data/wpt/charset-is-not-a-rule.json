@@ -1,0 +1,10 @@
+{
+ "source": "css/css-syntax/charset-is-not-a-rule.html",
+ "cases": [
+  {
+   "kind": "stylesheet-rule-count",
+   "input": "@charset \"utf-8\";\n@charset \"utf-8\";\nfoo { color: blue; }\n@charset \"utf-8\";",
+   "count": 1
+  }
+ ]
+}

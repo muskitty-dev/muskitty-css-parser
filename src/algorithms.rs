@@ -402,6 +402,14 @@ pub fn consume_a_stylesheets_contents(input: &mut TokenStream) -> Vec<Rule> {
             Token::Eof => return rules,
             Token::AtKeyword(_) => {
                 if let Some(rule) = consume_an_at_rule(input, false) {
+                    // §5.5.1 (L2246-2248): an at-keyword with value
+                    // "charset" is a parse error and the rule is never
+                    // emitted (WPT css/css-syntax/charset-is-not-a-rule.html).
+                    if rule.name.eq_ignore_ascii_case("charset") {
+                        // Parse error is tolerated (errors are not
+                        // surfaced); the rule is simply dropped.
+                        continue;
+                    }
                     rules.push(Rule::AtRule(rule));
                 }
             }

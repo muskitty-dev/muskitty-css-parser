@@ -1,0 +1,12 @@
+{
+ "source": "css/css-syntax/trailing-braces.html",
+ "cases": [
+  {
+   "kind": "declaration-name-count",
+   "input": "#target1 {\n    color:green;\n    color:red{};\n    color:red {};\n  }",
+   "declaration": "color",
+   "count": 1
+  }
+ ],
+ "note": "'color:red{}' is invalid: a {} block cannot follow a declaration value; consume-the-remnants drops it so only the first color declaration survives"
+}

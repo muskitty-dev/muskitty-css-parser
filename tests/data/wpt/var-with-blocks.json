@@ -1,0 +1,125 @@
+{
+ "source": "css/css-syntax/var-with-blocks.html",
+ "cases": [
+  {
+   "kind": "declaration-name-counts",
+   "input": ".a {\n    color: rgb(2, 2, 2);\n    color:var(--x);\n    background-color:rgb(1, 1, 1);\n  }",
+   "declaration_counts": {
+    "color": 2,
+    "background-color": 1
+   },
+   "desc": "plain_var"
+  },
+  {
+   "kind": "declaration-name-counts",
+   "input": ".a {\n    color: rgb(2, 2, 2);\n    color:{var(--x)};\n    background-color:rgb(1, 1, 1);\n  }",
+   "declaration_counts": {
+    "color": 2,
+    "background-color": 1
+   },
+   "desc": "whole_value_block"
+  },
+  {
+   "kind": "declaration-name-counts",
+   "input": ".a {\n    color: rgb(2, 2, 2);\n    color: { var(--x) };\n    background-color:rgb(1, 1, 1);\n  }",
+   "declaration_counts": {
+    "color": 2,
+    "background-color": 1
+   },
+   "desc": "whole_value_block_with_space"
+  },
+  {
+   "kind": "declaration-name-counts",
+   "input": ".a {\n    color: rgb(2, 2, 2);\n    color:var(--x) { };\n    background-color:rgb(1, 1, 1);\n  }",
+   "declaration_counts": {
+    "color": 1,
+    "background-color": 1
+   },
+   "desc": "trailing_block"
+  },
+  {
+   "kind": "declaration-name-counts",
+   "input": ".a {\n    color: rgb(2, 2, 2);\n    color:{ } var(--x);\n    background-color:rgb(1, 1, 1);\n  }",
+   "declaration_counts": {
+    "color": 1,
+    "background-color": 1
+   },
+   "desc": "leading_block"
+  },
+  {
+   "kind": "declaration-name-counts",
+   "input": ".a {\n    color: rgb(2, 2, 2);\n    color:{ var(--x) } A;\n    background-color:rgb(1, 1, 1);\n  }",
+   "declaration_counts": {
+    "color": 1,
+    "background-color": 1
+   },
+   "desc": "in_block_var_with_trailing_token"
+  },
+  {
+   "kind": "declaration-name-counts",
+   "input": ".a {\n    color: rgb(2, 2, 2);\n    color:A { var(--x) };\n    background-color:rgb(1, 1, 1);\n  }",
+   "declaration_counts": {
+    "color": 1,
+    "background-color": 1
+   },
+   "desc": "in_block_var_with_leading_token"
+  },
+  {
+   "kind": "declaration-name-counts",
+   "input": ".a {\n    --y:var(--x);\n  }",
+   "declaration_counts": {
+    "--y": 1
+   },
+   "desc": "plain_var_custom"
+  },
+  {
+   "kind": "declaration-name-counts",
+   "input": ".a {\n    --y:{var(--x)};\n  }",
+   "declaration_counts": {
+    "--y": 1
+   },
+   "desc": "whole_value_block_custom"
+  },
+  {
+   "kind": "declaration-name-counts",
+   "input": ".a {\n    --y: { var(--x) };\n  }",
+   "declaration_counts": {
+    "--y": 1
+   },
+   "desc": "whole_value_block_with_space_custom"
+  },
+  {
+   "kind": "declaration-name-counts",
+   "input": ".a {\n    --y:var(--x) { };\n  }",
+   "declaration_counts": {
+    "--y": 1
+   },
+   "desc": "trailing_block_custom"
+  },
+  {
+   "kind": "declaration-name-counts",
+   "input": ".a {\n    --y:{ } var(--x);\n  }",
+   "declaration_counts": {
+    "--y": 1
+   },
+   "desc": "leading_block_custom"
+  },
+  {
+   "kind": "declaration-name-counts",
+   "input": ".a {\n    --y:{ var(--x) } A;\n  }",
+   "declaration_counts": {
+    "--y": 1
+   },
+   "desc": "in_block_var_with_trailing_token_custom"
+  },
+  {
+   "kind": "declaration-name-counts",
+   "input": ".a {\n    --y:A { var(--x) };\n  }",
+   "declaration_counts": {
+    "--y": 1
+   },
+   "desc": "in_block_var_with_leading_token_custom"
+  }
+ ],
+ "note": "upstream asserts getPropertyValue values; ported as surviving declaration name counts (whole-value blocks valid for standard properties; ALL forms valid for custom properties)"
+}
