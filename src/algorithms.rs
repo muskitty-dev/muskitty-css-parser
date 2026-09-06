@@ -552,13 +552,60 @@ pub fn consume_a_qualified_rule(
 ///
 /// Precondition: next token is `{-token`. Discard it, consume block
 /// contents, discard `}-token (or EOF), return the contents.
+///
+/// CSS-P1（审计 2026-09-06）：规则级嵌套深度守卫。F-3 的
+/// [`MAX_NESTING_DEPTH`] 只挂在 [`consume_a_simple_block`] /
+/// [`consume_a_function`]（组件值层）；规则级递归环
+/// `consume_a_blocks_contents → consume_an_at_rule /
+/// consume_a_qualified_rule → consume_a_block →
+/// consume_a_blocks_contents` 中本函数直接吞掉 `{` 后递归，从不
+/// `enter_nesting` —— `@x{@x{…`（3 字节/层）或 `a{a{a{…`（2 字节/层）
+/// 约 8k-30k 层即栈溢出，仅需 ~24-60 KB 敌意 CSS，且这是 CSS 最自然的
+/// 嵌套形态（嵌套 style rule / at-rule）。此处统一 enter_nesting 封顶；
+/// 超限时 leave + 吞 token 到匹配 `}` 或 EOF（避免把深层内容泄漏成
+/// 外层兄弟规则），返回空 [`BlockContents`]（`NestingTooDeep` 已由
+/// `enter_nesting` 记录在流上，调用方按既有语义处理）。
 pub fn consume_a_block(input: &mut TokenStream) -> BlockContents {
     debug_assert!(matches!(input.next_token(), Token::OpenBrace));
     input.discard_token();
+
+    // 超限：停止下降，吞掉本块剩余内容（配平 `{`/`}`），返回空块。
+    if input.enter_nesting().is_some() {
+        input.leave_nesting();
+        skip_to_matching_close_brace(input);
+        return BlockContents::default();
+    }
+
     let contents = consume_a_blocks_contents(input);
     // §5.5.4 L2481: discard the closing `}-token (or EOF if implicit).
     input.discard_token();
+    input.leave_nesting();
     contents
+}
+
+/// 超限恢复：消费 token 直到配平当前块的 `}`（`{` 已被调用方吞掉，
+/// 深度从 1 起算）或 EOF。深层内容被丢弃而非上提成外层兄弟规则，
+/// 保证流的 `}` 配对与调用方（consume_an_at_rule /
+/// consume_a_qualified_rule 的收尾）一致。
+fn skip_to_matching_close_brace(input: &mut TokenStream) {
+    let mut depth: u32 = 1;
+    loop {
+        match input.next_token() {
+            Token::Eof => return,
+            Token::OpenBrace => {
+                depth += 1;
+                input.discard_token();
+            }
+            Token::CloseBrace => {
+                depth -= 1;
+                input.discard_token();
+                if depth == 0 {
+                    return;
+                }
+            }
+            _ => input.discard_token(),
+        }
+    }
 }
 
 /// §5.5.5 (L2486-2636) Consume a block's contents.
@@ -751,6 +798,92 @@ mod tests {
             ok.is_none(),
             "200-level nesting must remain within the limit, got {:?}",
             ok
+        );
+    }
+
+    /// CSS-P1：构造规则级嵌套输入（at-rule 或 qualified-rule 形态），
+    /// 走 parse-a-stylesheet 同款的 stylesheets-contents 消费路径，
+    /// 返回 (规则树, 是否触发 NestingTooDeep)。
+    fn rule_level_nesting(prefix: &str, n: usize, close: bool) -> (Vec<Rule>, Option<ParseError>) {
+        let mut input = prefix.repeat(n);
+        if close {
+            input.push_str(&"}".repeat(n));
+        }
+        let mut stream = TokenStream::with_source(&input);
+        let rules = consume_a_stylesheets_contents(&mut stream);
+        (rules, stream.nesting_error())
+    }
+
+    #[test]
+    fn deep_at_rule_block_nesting_records_nesting_too_deep() {
+        // CSS-P1: `@x{@x{…` × 10,000 —— 修复前规则级递归环从不
+        // enter_nesting，约 8k-30k 层即栈溢出 abort；修复后记录
+        // NestingTooDeep 并正常返回。
+        let (rules, err) = rule_level_nesting("@x{", 10_000, false);
+        assert!(
+            matches!(err, Some(ParseError::NestingTooDeep { .. })),
+            "expected NestingTooDeep, got {:?}",
+            err
+        );
+        // 顶层只产出 1 条 @x 规则；深层内容被丢弃而非上提。
+        assert_eq!(rules.len(), 1, "deep nesting must not spill into siblings");
+    }
+
+    #[test]
+    fn deep_qualified_rule_block_nesting_records_nesting_too_deep() {
+        // CSS-P1: `a{a{a{…`（2 字节/层，规则级嵌套的最廉价形态）。
+        let (rules, err) = rule_level_nesting("a{", 10_000, false);
+        assert!(
+            matches!(err, Some(ParseError::NestingTooDeep { .. })),
+            "expected NestingTooDeep, got {:?}",
+            err
+        );
+        assert_eq!(rules.len(), 1, "deep nesting must not spill into siblings");
+    }
+
+    #[test]
+    fn deep_at_rule_nesting_with_balanced_closes_terminates() {
+        // 配平闭合形态：超限块的恢复必须配平 `{`/`}` 吞到匹配的
+        // `}`，不能把深层内容泄漏成外层兄弟规则。
+        let (rules, err) = rule_level_nesting("@x{", 10_000, true);
+        assert!(
+            matches!(err, Some(ParseError::NestingTooDeep { .. })),
+            "expected NestingTooDeep, got {:?}",
+            err
+        );
+        assert_eq!(
+            rules.len(),
+            1,
+            "balanced deep nesting must stay inside the single top rule"
+        );
+    }
+
+    #[test]
+    fn normal_rule_nesting_parses_without_error() {
+        // 正常深度（100 层规则嵌套）→ 不触发 NestingTooDeep，且
+        // 结构完整（每层恰好 1 条子 at-rule）。
+        let (rules, err) = rule_level_nesting("@x{", 100, true);
+        assert!(
+            err.is_none(),
+            "100-level rule nesting must not trip the limit, got {err:?}"
+        );
+        assert_eq!(rules.len(), 1);
+        let mut depth = 0usize;
+        let mut current: Option<&Rule> = rules.first();
+        while let Some(rule) = current {
+            depth += 1;
+            current = match rule {
+                Rule::AtRule(ar) => ar
+                    .child_rules
+                    .as_ref()
+                    .and_then(|kids| kids.first())
+                    .map(|r| r as &Rule),
+                _ => None,
+            };
+        }
+        assert_eq!(
+            depth, 100,
+            "expected 100-level nested at-rules, got {depth}"
         );
     }
 }
