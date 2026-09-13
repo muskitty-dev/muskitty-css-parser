@@ -240,6 +240,7 @@ fn block_contents_invalid_decl_then_rule_restores_mark() {
         Token::Number(Numeric {
             value: 1.0,
             is_integer: true,
+            has_sign: false,
         }),
         Token::Semicolon,
         Token::Whitespace,
@@ -337,6 +338,7 @@ fn block_contents_only_decls() {
             Numeric {
                 value: 16.0,
                 is_integer: true,
+                has_sign: false,
             },
             "px".to_string(),
         ),

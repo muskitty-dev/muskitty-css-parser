@@ -47,10 +47,12 @@ fn component_value_simple_block_square() {
         Token::Number(Numeric {
             value: 1.0,
             is_integer: true,
+            has_sign: false,
         }),
         Token::Number(Numeric {
             value: 2.0,
             is_integer: true,
+            has_sign: false,
         }),
         Token::CloseBracket,
         Token::Eof,
@@ -73,6 +75,7 @@ fn component_value_function() {
         Token::Number(Numeric {
             value: 1.0,
             is_integer: true,
+            has_sign: false,
         }),
         Token::CloseParen,
         Token::Eof,
